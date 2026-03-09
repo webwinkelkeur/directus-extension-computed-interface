@@ -53,13 +53,15 @@ export const useDeepValues = (
 	collection: Ref<string>,
 	computedField: Ref<string>,
 	pk: Ref<string | number>,
-	template: string
+	template: string,
+	onRecomputeNeeded?: () => void,
 ) => {
 	const api = useApi();
 	const userStore = useStores().useUserStore();
 	const finalValues = ref<Record<string, any>>({
 		__currentUser: userStore.currentUser,
 		__api: api,
+		__onRecomputeNeeded: onRecomputeNeeded,
 	});
 	let fieldCache: Record<string, any> = {};
 	let itemCache: Record<string, any> = {};
@@ -204,6 +206,7 @@ export const useDeepValues = (
 				...relationalData,
 				__currentUser: userStore.currentUser,
 				__api: api,
+				__onRecomputeNeeded: onRecomputeNeeded,
 			};
 		},
 		{
@@ -238,6 +241,7 @@ export function fetchItem(
 	id: number | string,
 	fields: string,
 	collection: string,
+	onFetched?: () => void,
 ): Ref<any> {
 	const cacheKey = `${collection}:${id}:${fields}`;
 
@@ -252,11 +256,13 @@ export function fetchItem(
 		params: { fields },
 	})
 		.then((response) => {
-			data.value = response.data?.data?.[fields] ?? null;
+			data.value = response.data?.data ?? null;
+			onFetched?.();
 		})
 		.catch((err) => {
 			console.error('fetchItem failed', err);
 			data.value = null;
+			onFetched?.();
 		});
 
 	return data;

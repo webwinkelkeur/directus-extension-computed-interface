@@ -82,7 +82,8 @@ export default defineComponent({
 		const defaultValues = useCollection(props.collection).defaults
 		const computedValue = ref<string | number | null>(props.value);
 		const relations = useCollectionRelations(props.collection);
-		const { collection, field, primaryKey } = toRefs(props)
+		const { collection, field, primaryKey } = toRefs(props);
+		const recomputeTrigger = ref(0);
 
 		const values = useDeepValues(
 			inject<ComputedRef<Record<string, any>>>('values')!,
@@ -90,12 +91,13 @@ export default defineComponent({
 			collection,
 			field,
 			primaryKey,
-			props.template
+			props.template,
+			() => { recomputeTrigger.value++; },
 		);
 		const errorMsg = ref<string | null>(null);
 
 		if (values) {
-			watch(values, () => {
+			watch([values, recomputeTrigger], () => {
 				const newValue = compute();
 				computedValue.value = newValue;
 

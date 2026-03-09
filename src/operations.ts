@@ -484,7 +484,8 @@ function _parseExpression(
 				console.error('FIELD_FROM_COLLECTION requires __api in values');
 				return null;
 			}
-			return unref(fetchItem(values.__api, valueA, valueB, valueC));
+			const onRecompute = values.__onRecomputeNeeded as (() => void) | undefined;
+			return unref(fetchItem(values.__api, valueA, valueB, valueC, onRecompute));
 		}
 	} else if (args.length % 2 === 0) {
 		if (op === 'IFS') {
