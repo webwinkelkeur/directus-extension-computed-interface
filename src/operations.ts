@@ -475,7 +475,7 @@ function _parseExpression(
 			return null;
 		}
 		if (op === 'FIELD_FROM_COLLECTION') {
-			if (!isNaN(valueA) || !isString(valueB) || !isString(valueC)) {
+			if (isNaN(valueA) || !isString(valueB) || !isString(valueC)) {
 				console.log('Invalid arguments', valueA, valueB, valueC);
 				return null;
 			}
