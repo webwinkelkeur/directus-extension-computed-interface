@@ -409,11 +409,16 @@ function _parseExpression(
 			return null;
 		}
 		if (op === 'GET_TRANSLATION') {
-			if (!Array.isArray(valueA) || !isString(valueB)) {
+			let translations = valueA;
+			if (translations && typeof translations === 'object' && !Array.isArray(translations) && 'translations' in translations) {
+				translations = (translations as { translations?: unknown[] }).translations ?? [];
+			}
+			if (!Array.isArray(translations) || !isString(valueB)) {
 				return null;
 			}
 
-			return valueA.find(tr => tr.languages_code === valueB);
+			const match = translations.find((tr: { languages_code?: string }) => tr.languages_code === valueB);
+			return match ?? null;
 		}
 	} else if (args.length === 3) {
 		const valueA = parseExpression(args[0], values, defaultValues, debug);
