@@ -1,12 +1,13 @@
 import { fetchItem, findValueByPath, isString } from './utils';
+import { unref } from 'vue';
 
-export async function parseExpression(
+export function parseExpression(
 	exp: string,
 	values: Record<string, any>,
 	defaultValues: Record<string, any> = {},
 	debug: boolean = false,
-): Promise<any> {
-	const result = await _parseExpression(exp, values, defaultValues, debug);
+): any {
+	const result = _parseExpression(exp, values, defaultValues, debug);
 	if (debug) {
 		console.log(`${exp} =`, result);
 	}
@@ -14,12 +15,12 @@ export async function parseExpression(
 	return result;
 }
 
-async function _parseExpression(
+function _parseExpression(
 	exp: string,
 	values: Record<string, any>,
 	defaultValues: Record<string, any> = {},
 	debug: boolean = false,
-): Promise<any> {
+): any {
 	if (!values) {
 		return '';
 	}
@@ -62,7 +63,7 @@ async function _parseExpression(
 
 	// unary operators
 	if (args.length === 1) {
-		const valueA = await parseExpression(args[0], values, defaultValues, debug);
+		const valueA = parseExpression(args[0], values, defaultValues, debug);
 		// type conversion
 		if (op === 'INT') {
 			return parseInt(valueA);
@@ -118,7 +119,7 @@ async function _parseExpression(
 					SECONDS: 'getSeconds',
 					TIME: 'getTime',
 				};
-				return valueA[op2func[op] as keyof Date]();
+				return valueA[op2func[op]]();
 			}
 			return 0;
 		}
@@ -240,115 +241,63 @@ async function _parseExpression(
 		// aggregated operators
 		if (op === 'ASUM') {
 			// aggregated sum
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			let sum = 0;
-			for (const item of arr) {
-				sum += await parseExpression(args[1], item as typeof values, {}, debug);
-			}
-			return sum;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => acc + parseExpression(args[1], item as typeof values, {}, debug), 0) ?? 0;
 		}
 		if (op === 'AMIN') {
 			// aggregated min
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			let min = Infinity;
-			for (const item of arr) {
-				min = Math.min(min, await parseExpression(args[1], item as typeof values, {}, debug));
-			}
-			return arr.length ? min : 0;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => Math.min(acc, parseExpression(args[1], item as typeof values, {}, debug)), Infinity) ?? 0;
 		}
 		if (op === 'AMAX') {
 			// aggregated max
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			let max = -Infinity;
-			for (const item of arr) {
-				max = Math.max(max, await parseExpression(args[1], item as typeof values, {}, debug));
-			}
-			return arr.length ? max : 0;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => Math.max(acc, parseExpression(args[1], item as typeof values, {}, debug)), -Infinity) ?? 0;
 		}
 		if (op === 'AAVG') {
 			// aggregated average
 			const arr = (values[args[0]] as unknown[]) ?? [];
-			let sum = 0;
-			for (const item of arr) {
-				sum += await parseExpression(args[1], item as typeof values, {}, debug);
-			}
-			return arr.length ? sum / arr.length : 0;
+			return arr.reduce((acc, item) => acc + parseExpression(args[1], item as typeof values, {}, debug), 0) / arr.length;
 		}
 		if (op === 'AMUL') {
 			// aggregated multiplication
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			let product = 1;
-			for (const item of arr) {
-				product *= await parseExpression(args[1], item as typeof values, {}, debug);
-			}
-			return arr.length ? product : 0;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => acc * parseExpression(args[1], item as typeof values, {}, debug), 1) ?? 0;
 		}
 		if (op === 'AAND') {
 			// aggregated and
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			for (const item of arr) {
-				if (!(await parseExpression(args[1], item as typeof values, {}, debug))) {
-					return false;
-				}
-			}
-			return arr.length ? true : false;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => acc && parseExpression(args[1], item as typeof values, {}, debug), true) ?? false;
 		}
 		if (op === 'AOR') {
 			// aggregated or
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			for (const item of arr) {
-				if (await parseExpression(args[1], item as typeof values, {}, debug)) {
-					return true;
-				}
-			}
-			return false;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => acc || parseExpression(args[1], item as typeof values, {}, debug), false) ?? false;
 		}
 		if (op === 'ACOUNT') {
 			// aggregated count
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			let count = 0;
-			for (const item of arr) {
-				if (await parseExpression(args[1], item as typeof values, {}, debug)) {
-					count += 1;
-				}
-			}
-			return count;
+			return (values[args[0]] as unknown[])?.reduce((acc, item) => acc + (parseExpression(args[1], item as typeof values, {}, debug) ? 1 : 0), 0) ?? 0;
 		}
 		// loop operators
 		if (op === 'MAP') {
 			// map
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			return Promise.all(arr.map((item) => parseExpression(args[1], item as typeof values, {}, debug)));
+			return (values[args[0]] as unknown[])?.map((item) => parseExpression(args[1], item as typeof values, {}, debug)) ?? [];
 		}
 		if (op === 'FILTER') {
 			// filter
-			const arr = (values[args[0]] as unknown[]) ?? [];
-			const checks = await Promise.all(arr.map((item) => parseExpression(args[1], item as typeof values, {}, debug)));
-			return arr.filter((_, index) => Boolean(checks[index]));
+			return (values[args[0]] as unknown[])?.filter((item) => parseExpression(args[1], item as typeof values, {}, debug)) ?? [];
 		}
 		if (op === 'SORT') {
 			// sort
 			const arr = (values[args[0]] as unknown[]) ?? [];
 			const field = args[1];
 			// copy the array to avoid mutating the original array
-			const decorated = await Promise.all(
-				[...arr].map(async (item) => ({
-					item,
-					value: await parseExpression(field, item as typeof values, {}, debug),
-				})),
-			);
-			return decorated
-				.sort((a, b) => {
-					if (a.value < b.value) return -1;
-					if (a.value > b.value) return 1;
-					return 0;
-				})
-				.map(({ item }) => item);
+			return [...arr].sort((a, b) => {
+				const aVal = parseExpression(field, a as typeof values, {}, debug);
+				const bVal = parseExpression(field, b as typeof values, {}, debug);
+				if (aVal < bVal) return -1;
+				if (aVal > bVal) return 1;
+				return 0;
+			});
 		}
 
 		// binary operators
-		const valueA = await parseExpression(args[0], values, defaultValues, debug);
-		const valueB = await parseExpression(args[1], values, defaultValues, debug);
+		const valueA = parseExpression(args[0], values, defaultValues, debug);
+		const valueB = parseExpression(args[1], values, defaultValues, debug);
 
 		// arithmetic
 		if (op === 'SUM') {
@@ -460,9 +409,9 @@ async function _parseExpression(
 			return null;
 		}
 	} else if (args.length === 3) {
-		const valueA = await parseExpression(args[0], values, defaultValues, debug);
-		const valueB = await parseExpression(args[1], values, defaultValues, debug);
-		const valueC = await parseExpression(args[2], values, defaultValues, debug);
+		const valueA = parseExpression(args[0], values, defaultValues, debug);
+		const valueB = parseExpression(args[1], values, defaultValues, debug);
+		const valueC = parseExpression(args[2], values, defaultValues, debug);
 
 		if (op === 'IF') {
 			if (valueA === true) {
@@ -527,21 +476,17 @@ async function _parseExpression(
 			return null;
 		}
 		if (op === 'FIELD_FROM_COLLECTION') {
-			if (isNaN(Number(valueA)) || !isString(valueB) || !isString(valueC)) {
+			if (isNaN(valueA) || !isString(valueB) || !isString(valueC)) {
 				console.log('Invalid arguments', valueA, valueB, valueC);
 				return null;
 			}
-			const api = values.__api;
-			if (!api) {
-				throw new Error('FIELD_FROM_COLLECTION requires values.__api to be available');
-			}
-			return await fetchItem(api, valueA, valueB, valueC);
+			return unref(fetchItem(valueA, valueB, valueC));
 		}
 	} else if (args.length % 2 === 0) {
 		if (op === 'IFS') {
 			for (let i = 0; i < args.length; i += 2) {
-				if ((await parseExpression(args[i], values, defaultValues, debug)) === true) {
-					return await parseExpression(args[i + 1], values, defaultValues, debug);
+				if (parseExpression(args[i], values, defaultValues, debug) === true) {
+					return parseExpression(args[i + 1], values, defaultValues, debug);
 				}
 			}
 			return null;

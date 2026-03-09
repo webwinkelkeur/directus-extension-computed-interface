@@ -1,6 +1,5 @@
-import { watch, ref, computed } from 'vue';
+import { watch, ref, computed, ComputedRef } from 'vue';
 import type { Ref } from 'vue';
-import type { AxiosInstance } from 'axios';
 import { useApi, useStores } from '@directus/extensions-sdk';
 import { Relation } from '@directus/shared/types';
 
@@ -59,7 +58,6 @@ export const useDeepValues = (
 	const userStore = useStores().useUserStore();
 	const finalValues = ref<Record<string, any>>({
 		__currentUser: userStore.currentUser,
-		__api: api,
 	});
 	let fieldCache: Record<string, any> = {};
 	let itemCache: Record<string, any> = {};
@@ -199,12 +197,7 @@ export const useDeepValues = (
 				relationalData[key] = isM2O ? arrayOfData[0] : arrayOfData;
 			}
 
-			finalValues.value = {
-				...valObj,
-				...relationalData,
-				__currentUser: userStore.currentUser,
-				__api: api,
-			};
+			finalValues.value = { ...valObj, ...relationalData, __currentUser: userStore.currentUser };
 		},
 		{
 			deep: false,
@@ -231,20 +224,22 @@ export function isString(value: unknown): value is string {
 	return typeof value === 'string' || value instanceof String;
 }
 
-export async function fetchItem(
-	api: AxiosInstance,
-	id: number | string,
-	fields: string,
-	collection: string,
-): Promise<any> {
-	try {
-		const response = await api.get(`items/${collection}/${id}`, {
-			params: { fields },
-		});
-
-		return response.data?.data?.[fields] ?? null;
-	} catch (err) {
-		console.error('fetchItem failed', err);
-		return null;
-	}
+export async function fetchItem(id: number, fields: string, collection: string): Promise<Ref> {
+	console.log('Fetching item with useApi and watcher', id, fields, collection);
+	const data = ref<Ref<string, null>>();
+	const api = useApi();
+	console.log('the api', api);
+	watch([id, fields, collection], async () => {
+		try {
+			const response = await api.get(`items/${collection}/${id}?fields=${fields}`);
+			console.log(response);
+			data.value = response.data;
+		} catch (err) {
+			console.error('fetchItem failed', err);
+		}
+	}, {
+		deep: false,
+		immediate: true,
+	});
+	return data;
 }
