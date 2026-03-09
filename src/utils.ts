@@ -1,7 +1,7 @@
-import { watch, ref, computed } from 'vue';
+import { watch, ref, computed, ComputedRef } from 'vue';
 import type { Ref } from 'vue';
-import { useApi, useItems, useStores } from '@directus/extensions-sdk';
-import { Relation, Item } from '@directus/shared/types';
+import { useApi, useStores } from '@directus/extensions-sdk';
+import { Relation } from '@directus/shared/types';
 
 export function checkFieldInTemplate(template: string, field: string) {
 	const matches = template.match(/{{.*?}}/g);
@@ -224,20 +224,9 @@ export function isString(value: unknown): value is string {
 	return typeof value === 'string' || value instanceof String;
 }
 
-export async function fetchItem(id: number, fields: string, collection: string): Ref<Item[]> {
+export async function fetchItem(id: number, fields: string, collection: string): Promise<ComputedRef> {
 	console.log('Fetching item', id, fields, collection);
-	const collectionRef  = ref(collection);
-	const query = {
-		fields: ref([fields]),
-		filter: ref({})
-	};
-
-	query.filter.value.id = id;
-	console.log(collectionRef, query);
-	const {getItems, items} = useItems(collectionRef, query);
-	await getItems();
-	const data = items.value;
-	console.log(data);
-
-	return items;
+	const api = useApi();
+	const response = await api.get(`items/${collection}/${id}?fields=${fields}`);
+	return computed(() => response.data);
 }

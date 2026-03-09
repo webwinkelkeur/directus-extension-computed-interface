@@ -1,4 +1,5 @@
 import { fetchItem, findValueByPath, isString } from './utils';
+import { unref } from 'vue';
 
 export function parseExpression(
 	exp: string,
@@ -479,7 +480,7 @@ function _parseExpression(
 				console.log('Invalid arguments', valueA, valueB, valueC);
 				return null;
 			}
-			return fetchItem(valueA, valueB, valueC);
+			return unref(fetchItem(valueA, valueB, valueC));
 		}
 	} else if (args.length % 2 === 0) {
 		if (op === 'IFS') {
