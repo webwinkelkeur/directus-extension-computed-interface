@@ -24,6 +24,7 @@
 	},
 	"scripts": {
 		"build": "directus-extension build",
+		"prepare": "pnpm build",
 		"dev": "directus-extension build -w --no-minify",
 		"test": "TZ=UTC jest"
 	},
