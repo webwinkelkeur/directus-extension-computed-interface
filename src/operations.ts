@@ -476,11 +476,15 @@ function _parseExpression(
 			return null;
 		}
 		if (op === 'FIELD_FROM_COLLECTION') {
-			if (isNaN(valueA) || !isString(valueB) || !isString(valueC)) {
+			if (isNaN(Number(valueA)) || !isString(valueB) || !isString(valueC)) {
 				console.log('Invalid arguments', valueA, valueB, valueC);
 				return null;
 			}
-			return unref(fetchItem(valueA, valueB, valueC));
+			if (!values.__api) {
+				console.error('FIELD_FROM_COLLECTION requires __api in values');
+				return null;
+			}
+			return unref(fetchItem(values.__api, valueA, valueB, valueC));
 		}
 	} else if (args.length % 2 === 0) {
 		if (op === 'IFS') {
