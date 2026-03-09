@@ -224,11 +224,11 @@ export function isString(value: unknown): value is string {
 	return typeof value === 'string' || value instanceof String;
 }
 
-export async function fetchItem(id: number, fields: Array<string>, collection: string): Ref<Item[]> {
+export async function fetchItem(id: number, fields: string, collection: string): Ref<Item[]> {
 	console.log('Fetching item', id, fields, collection);
 	const collectionRef  = ref(collection);
 	const query = {
-		fields: ref(fields),
+		fields: ref([fields]),
 		filter: ref({})
 	};
 
