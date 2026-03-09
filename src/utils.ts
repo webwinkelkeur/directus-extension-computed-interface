@@ -224,9 +224,22 @@ export function isString(value: unknown): value is string {
 	return typeof value === 'string' || value instanceof String;
 }
 
-export async function fetchItem(id: number, fields: string, collection: string): Promise<ComputedRef> {
-	console.log('Fetching item', id, fields, collection);
+export async function fetchItem(id: number, fields: string, collection: string): Promise<Ref> {
+	console.log('Fetching item with useApi and watcher', id, fields, collection);
+	const data = ref<Ref<string, null>>();
 	const api = useApi();
-	const response = await api.get(`items/${collection}/${id}?fields=${fields}`);
-	return computed(() => response.data);
+	console.log('the api', api);
+	watch([id, fields, collection], async () => {
+		try {
+			const response = await api.get(`items/${collection}/${id}?fields=${fields}`);
+			console.log(response);
+			data.value = response.data;
+		} catch (err) {
+			console.error('fetchItem failed', err);
+		}
+	}, {
+		deep: false,
+		immediate: true,
+	});
+	return data;
 }
