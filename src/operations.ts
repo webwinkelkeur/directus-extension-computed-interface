@@ -408,6 +408,13 @@ function _parseExpression(
 			}
 			return null;
 		}
+		if (op === 'GET_TRANSLATION') {
+			if (!Array.isArray(valueA) || !isString(valueB)) {
+				return null;
+			}
+
+			return valueA.find(tr => tr.languages_code === valueB);
+		}
 	} else if (args.length === 3) {
 		const valueA = parseExpression(args[0], values, defaultValues, debug);
 		const valueB = parseExpression(args[1], values, defaultValues, debug);
