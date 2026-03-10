@@ -224,6 +224,9 @@ export const findValueByPath = (obj: Record<string, any>, path: string) => {
 		return { value: null, found: false };
 	}
 	for (const i of path.split('.')) {
+		if (value === null || value === undefined || !(typeof value === 'object' && !Array.isArray(value))) {
+			return { value: null, found: false };
+		}
 		if (i in value) {
 			value = value[i];
 		} else {
