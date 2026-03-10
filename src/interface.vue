@@ -17,7 +17,7 @@
 </template>
 
 <script lang="ts">
-import { ComputedRef, defineComponent, inject, ref, watch, toRefs } from 'vue';
+import { ComputedRef, defineComponent, inject, ref, watch, toRefs, unref } from 'vue';
 import { parseExpression } from './operations';
 import { useDeepValues, useCollectionRelations } from './utils';
 import { useCollection } from '@directus/extensions-sdk';
@@ -124,7 +124,9 @@ export default defineComponent({
 			try {
 				const res = props.template.replace(/{{.*?}}/g, (match) => {
 					const expression = match.slice(2, -2).trim();
-					return parseExpression(expression, values.value, defaultValues.value, props.debugMode);
+					const raw = parseExpression(expression, values.value, defaultValues.value, props.debugMode);
+					const value = unref(raw);
+					return value === null || value === undefined ? '' : value;
 				});
 
 				errorMsg.value = null;
